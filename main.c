@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <time.h>
 #include <stdlib.h>
+#include <omp.h>
 
 #ifdef __CYGWIN__
 # define CLOCK CLOCK_MONOTONIC
@@ -101,7 +102,7 @@ int partition(int left, int right, int pivot) {
 
 /**
  * Quick sort is a recursive algorithm that breaks the array into two different sections at the partition point.
- * Each of these is sorted. TODO: Parallelize this call. Then, add timers.
+ * Each of these is sorted.
  * @param left - the point on the left side of the array to start with
  * @param right - the point on the right side of the array to start with
  */
@@ -112,11 +113,19 @@ void quick_sort(int left, int right) {
         int pivot = intArray[right]; // pivot begins as the last element in the array for this program
         int partitionPoint = partition(left, right, pivot);
 
-        // parallelize this part, I think.
-        //# pragma omp parallel num_threads(8) shared(partitionPoint, left, right)
+        // Parallelize the recursive calls. After partitioning, this is
+        // embarassingly parallel. This creates two sections to be done
+        // independently of one another.
+# pragma omp sections
         {
-            quick_sort(left, partitionPoint - 1);
-            quick_sort(partitionPoint + 1, right);
+# pragma omp section
+            {
+                    quick_sort(left, partitionPoint - 1);
+            }
+# pragma omp section
+            {
+                    quick_sort(partitionPoint + 1, right);
+            }
         }
     }
 }
@@ -143,12 +152,19 @@ int main() {
     display();
     printline(50);
 
+    // Tell OMP how to handle the recursion
+    omp_set_nested(1);
+    omp_set_num_threads(2);
+
     // Collect the processor start time
     clock_t  begin = clock();
     // Collect the wall start time
     clock_gettime(CLOCK, &start);
-    // perform the calculation to measure
-    quick_sort(0, MAX-1); // start the sort out with the first and last indices of the array
+    // perform the calculation to measure in parallel
+# pragma omp parallel
+    {
+        quick_sort(0, MAX - 1); // start the sort out with the first and last indices of the array
+    }
     // Collect the processor end time
     clock_t end = clock();
     // Collect the wall end time
