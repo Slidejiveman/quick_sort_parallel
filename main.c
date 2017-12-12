@@ -19,7 +19,7 @@ int intArray[MAX] = {};
  * Initializes the array with MAX number of random numbers.
  */
 void initialize_array() {
-    srand(NULL);
+    srand(time(NULL));
     for (int i = 0; i < MAX; i++) {
         intArray[i] = rand();
     }
